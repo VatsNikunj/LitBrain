@@ -1,0 +1,18 @@
+# Core dependencies
+requests
+PyYAML
+tqdm
+ebooklib
+python-slugify
+sqlalchemy
+
+# AI/ML/NLP
+spacy
+transformers
+sentence-transformers
+rapidfuzz
+Pillow
+
+# Optional for CLI
+click
+tabulate

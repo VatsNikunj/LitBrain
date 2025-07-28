@@ -1,0 +1,49 @@
+library_path: "/library"
+metadata_db_path: "/library/metadata.db"
+
+file_extensions:
+  - ".epub"
+  - ".pdf"
+  - ".mobi"
+  - ".azw3"
+  - ".azw"
+  - ".azw4"
+  - ".cbr"
+  - ".cbz"
+  - ".fb2"
+  - ".djvu"
+  - ".lit"
+  - ".prc"
+  - ".txt"
+  - ".rtf"
+  - ".doc"
+  - ".docx"
+  - ".odt"
+  - ".html"
+  - ".htm"
+  - ".chm"
+  - ".pdb"
+  - ".tr2"
+  - ".tr3"
+  - ".xml"
+  - ".xps"
+  - ".ps"
+  - ".psd"
+  - ".zip"
+  - ".rar"
+  - ".7z"
+
+metadata_sources:
+  priority: ["google_books", "open_library"]
+  google_books_api_key: "YOUR_GOOGLE_BOOKS_API_KEY"
+
+rename_pattern: "{author} - {title} ({year})"
+delete_empty_folders: true
+move_duplicates_to: "/library/duplicates"
+
+tag_normalization:
+  ai_enabled: true
+  manual_map:
+    ai: "AI"
+    Ai: "AI"
+    aI: "AI"
