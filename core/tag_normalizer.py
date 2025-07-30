@@ -22,9 +22,17 @@ class TagNormalizer:
         clusters = {}
 
         for tag in unique_tags:
-            match, score, _ = process.extractOne(
-                tag, list(clusters.keys()), scorer=fuzz.token_sort_ratio
-            )
+            if not clusters:
+                clusters[tag] = [tag]
+                continue
+
+            result = process.extractOne(tag, list(clusters.keys()), scorer=fuzz.token_sort_ratio)
+
+            if not result:
+                clusters[tag] = [tag]
+                continue
+
+            match, score, _ = result
             if score > 85:
                 clusters[match].append(tag)
             else:

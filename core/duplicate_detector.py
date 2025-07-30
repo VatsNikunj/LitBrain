@@ -1,9 +1,12 @@
 import hashlib
 from sentence_transformers import SentenceTransformer, util
+from core.config_loader import load_config
 
 class DuplicateDetector:
     def __init__(self, ai_enabled=False):
         self.ai_enabled = ai_enabled
+        cfg = load_config()
+        self.book_exts = [ext.lower() for ext in cfg.get("file_extensions", [])]
         self.model = SentenceTransformer("all-MiniLM-L6-v2") if ai_enabled else None
 
     def file_hash(self, file_path):
@@ -38,7 +41,7 @@ class DuplicateDetector:
             for b in books:
                 text = f"{b['title']} {b.get('author','')}"
                 emb = self.model.encode(text, convert_to_tensor=True)
-                groups[b["id"]] = emb
+                groups[b.get("path", b.get("title"))] = emb
 
             checked = set()
             for id1, emb1 in groups.items():

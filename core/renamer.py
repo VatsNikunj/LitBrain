@@ -1,16 +1,14 @@
-import os
 from pathlib import Path
-from slugify import slugify
 import shutil
+from slugify import slugify
+from core.config_loader import load_config
 
 class Renamer:
-    def __init__(self, rename_pattern="{author} - {title} ({year})"):
-        self.pattern = rename_pattern
+    def __init__(self):
+        cfg = load_config()
+        self.pattern = cfg.get("rename_pattern", "{author} - {title} ({year})")
 
     def rename_book(self, book_info):
-        """
-        book_info: dict with title, author, year, path
-        """
         title = slugify(book_info.get("title", "Unknown"))
         author = slugify(book_info.get("author", "Unknown"))
         year = str(book_info.get("year", ""))

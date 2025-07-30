@@ -1,18 +1,28 @@
 # Core dependencies
-requests
 PyYAML
+requests
 tqdm
 ebooklib
 python-slugify
 sqlalchemy
+pandas
+tabulate
 
-# AI/ML/NLP
+# CLI
+click
+
+# Streamlit dashboard
+streamlit
+
+# AI / NLP
 spacy
 transformers
 sentence-transformers
 rapidfuzz
 Pillow
 
-# Optional for CLI
-click
-tabulate
+# For optional caching or DB operations
+tinydb
+
+# For testing (optional, can be removed if not needed now)
+pytest

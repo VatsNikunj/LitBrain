@@ -11,11 +11,14 @@ from core.tag_normalizer import TagNormalizer
 from core.duplicate_detector import DuplicateDetector
 from core.renamer import Renamer
 from core.reporter import Reporter
+from core.cover_manager import CoverManager
+from core.config_loader import load_config
 
 # AI modules
 from ai_modules.filename_parser import FilenameParser
 from ai_modules.metadata_ranker import MetadataRanker
 from ai_modules.tag_classifier import TagClassifier
+from ai_modules.genre_auto_tagger import GenreAutoTagger
 
 # Load config
 def load_config(config):
@@ -28,16 +31,17 @@ def run_calibredb(command, db_path, library_path):
 
 @click.group()
 def cli():
-    """Calibre AI Tools - AI-enhanced library manager"""
+    """LitBrain - AI-enhanced library manager"""
     pass
 
 # ---------- SCAN ----------
 @cli.command()
 @click.option("--config", default="config.yaml", help="Path to config file.")
 def scan(config):
-    cfg = load_config(config)
+    with open(config) as f:
+        cfg = yaml.safe_load(f)
     books = scan_library(cfg["library_path"])
-    click.echo(f"📚 Found {len(books)} books in library:")
+    click.echo(f"Found {len(books)} books.")
     for b in books[:10]:
         click.echo(f"- {b['title']} ({b['extension']})")
 
@@ -46,7 +50,7 @@ def scan(config):
 @click.option("--config", default="config.yaml", help="Path to config file.")
 @click.option("--ai", is_flag=True, help="Enable AI-powered filename parsing and ranking.")
 def metadata(config, ai):
-    cfg = load_config(config)
+    cfg = load_config()
     db = DBManager(cfg["metadata_db_path"])
     fetcher = MetadataFetcher(cfg["metadata_sources"].get("google_books_api_key"))
     parser = FilenameParser(use_spacy=ai)
@@ -89,7 +93,7 @@ def metadata(config, ai):
 @click.option("--config", default="config.yaml", help="Path to config file.")
 @click.option("--ai", is_flag=True, help="Enable AI clustering for tags.")
 def tags(config, ai):
-    cfg = load_config(config)
+    cfg = load_config()
     db = DBManager(cfg["metadata_db_path"])
     normalizer = TagNormalizer(manual_map=cfg.get("tag_normalization", {}).get("manual_map", {}), ai_enabled=ai)
 
@@ -104,7 +108,7 @@ def tags(config, ai):
 @click.option("--config", default="config.yaml", help="Path to config file.")
 @click.option("--ai", is_flag=True, help="Enable AI semantic duplicate detection.")
 def duplicates(config, ai):
-    cfg = load_config(config)
+    cfg = load_config()
     books = scan_library(cfg["library_path"])
     detector = DuplicateDetector(ai_enabled=ai)
 
@@ -117,7 +121,7 @@ def duplicates(config, ai):
 @cli.command()
 @click.option("--config", default="config.yaml", help="Path to config file.")
 def rename(config):
-    cfg = load_config(config)
+    cfg = load_config()
     renamer = Renamer(cfg.get("rename_pattern", "{author} - {title} ({year})"))
     books = scan_library(cfg["library_path"])
 
@@ -130,7 +134,7 @@ def rename(config):
 @cli.command()
 @click.option("--config", default="config.yaml", help="Path to config file.")
 def report(config):
-    cfg = load_config(config)
+    cfg = load_config()
     reporter = Reporter()
 
     books = scan_library(cfg["library_path"])
@@ -138,6 +142,57 @@ def report(config):
 
     path = reporter.report_missing_metadata(missing)
     click.echo(f"📄 Report generated: {path}")
+
+# ---------- AUTO-TAGGING ----------
+@cli.command()
+@click.option("--config", default="config.yaml", help="Path to config file.")
+@click.option("--ai", is_flag=True, help="Enable AI auto-tagging based on description.")
+def auto_tag(config, ai):
+    cfg = load_config()
+    if not ai:
+        click.echo("⚠️ AI auto-tagging requires --ai flag.")
+        return
+
+    db = DBManager(cfg["metadata_db_path"])
+    fetcher = MetadataFetcher(cfg["metadata_sources"].get("google_books_api_key"))
+    tagger = GenreAutoTagger()
+
+    books = db.get_all_books()
+    for book_id, title, author, path in books:
+        results = fetcher.search_metadata(title, author)
+        if not results:
+            continue
+        meta = fetcher.extract_metadata_info(results[0])
+        genres = tagger.get_genres(meta.get("description", ""))
+        if genres:
+            db.set_book_tags(book_id, genres)
+            click.echo(f"✅ Updated tags for {title}: {genres}")
+
+# ---------- DOWNLOAD COVERS ----------
+@cli.command()
+@click.option("--config", default="config.yaml", help="Path to config file.")
+def covers(config):
+    cfg = load_config()
+    db = DBManager(cfg["metadata_db_path"])
+    fetcher = MetadataFetcher(cfg["metadata_sources"].get("google_books_api_key"))
+    cover_mgr = CoverManager(cfg["library_path"])
+
+    books = db.get_all_books()
+    for book_id, title, author, path in books:
+        folder = Path(path).parent
+        if cover_mgr.has_cover(folder):
+            continue
+
+        results = fetcher.search_metadata(title, author)
+        if not results:
+            continue
+
+        meta = fetcher.extract_metadata_info(results[0])
+        cover_url = meta.get("cover_url")
+        if cover_url:
+            saved = cover_mgr.download_cover(folder, cover_url)
+            if saved:
+                click.echo(f"🖼 Downloaded cover for {title}")
 
 if __name__ == "__main__":
     cli()
